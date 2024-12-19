@@ -57,7 +57,8 @@ step3() {
 step4() {
     echo "Starting Devnet SOL mining..."
     if command_exists devnet-pow; then
-        devnet-pow mine
+        read -p "Enter your wallet address: " WALLET_ADDRESS
+        devnet-pow mine --wallet "$WALLET_ADDRESS"
     else
         echo "Devnet POW is not installed. Please run Step 2 first."
     fi
