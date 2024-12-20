@@ -66,8 +66,21 @@ start_mining() {
         return 1
     fi
 
-    echo "Starting mining with the keypair from ~/my-solana-wallet.json..."
-    devnet-pow mine --keypair-path ~/my-solana-wallet.json
+    # Start mining in a screen session
+    echo "Starting mining in a screen session named 'pow-miner'..."
+    screen -dmS pow-miner bash -c '
+        while true; do
+            echo "Starting mining with the keypair from ~/my-solana-wallet.json..."
+            devnet-pow mine --keypair-path ~/my-solana-wallet.json
+            if [ $? -ne 0 ]; then
+                echo "Error occurred or mining stopped unexpectedly. Retrying in 5 seconds..."
+                sleep 5
+            else
+                echo "Mining completed or stopped. Restarting..."
+            fi
+        done
+    '
+    echo "Mining process started in the background. Use 'screen -r pow-miner' to view logs."
 }
 
 # Step 6: View wallet details
