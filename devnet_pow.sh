@@ -6,7 +6,7 @@ command_exists() {
 }
 
 # Step 1: Install Rust and Cargo
-step1() {
+install_rust() {
     echo "Installing Rust and Cargo..."
     if command_exists rustc && command_exists cargo; then
         echo "Rust and Cargo are already installed."
@@ -20,7 +20,7 @@ step1() {
 }
 
 # Step 2: Install the Devnet POW Crate
-step2() {
+install_devnet_pow() {
     echo "Installing Devnet POW Crate..."
     if command_exists devnet-pow; then
         echo "Devnet POW is already installed."
@@ -32,7 +32,7 @@ step2() {
 }
 
 # Step 3: Configure Solana CLI
-step3() {
+configure_solana() {
     echo "Configuring Solana CLI..."
     if ! command_exists solana; then
         echo "Installing Solana CLI..."
@@ -42,51 +42,94 @@ step3() {
 
     echo "Setting Solana CLI to Devnet..."
     solana config set --url https://api.devnet.solana.com
+}
 
+# Step 4: Generate a new Solana wallet
+create_wallet() {
+    echo "Generating a new Solana wallet..."
     if [ ! -f ~/my-solana-wallet.json ]; then
-        echo "Generating a new wallet..."
-        solana-keygen new --outfile ~/my-solana-wallet.json
-    fi
-
-    echo "Setting wallet as default..."
-    solana config set --keypair ~/my-solana-wallet.json
-    echo "Your wallet address is: $(solana address)"
-}
-
-# Step 4: Start Mining Devnet SOL
-step4() {
-    echo "Starting Devnet SOL mining..."
-    if command_exists devnet-pow; then
-        read -p "Enter your wallet address: " WALLET_ADDRESS
-        devnet-pow mine --wallet "$WALLET_ADDRESS"
+        solana-keygen new --outfile ~/my-solana-wallet.json --force
+        echo "New wallet generated at ~/my-solana-wallet.json"
     else
-        echo "Devnet POW is not installed. Please run Step 2 first."
+        echo "Wallet already exists at ~/my-solana-wallet.json"
+    fi
+    # Set the generated wallet as the default for Solana CLI
+    solana config set --keypair ~/my-solana-wallet.json
+    echo "Wallet address is: $(solana address)"
+}
+
+# Step 5: Start mining Devnet SOL
+start_mining() {
+    echo "Starting Devnet SOL mining..."
+    if [ ! -f ~/my-solana-wallet.json ]; then
+        echo "No wallet found. Please create a wallet first (Step 4)."
+        return 1
+    fi
+
+    echo "Starting mining with the keypair from ~/my-solana-wallet.json..."
+    devnet-pow mine --keypair-path ~/my-solana-wallet.json
+}
+
+# Step 6: View wallet details
+view_wallet_details() {
+    echo "Viewing wallet details..."
+    if [ -f ~/my-solana-wallet.json ]; then
+        echo "Wallet file exists at ~/my-solana-wallet.json"
+        echo "Wallet Address: $(solana address)"
+        echo "Wallet Keypair: $(cat ~/my-solana-wallet.json)"
+    else
+        echo "No wallet found. Please create a wallet first (Step 4)."
     fi
 }
 
+# Step 7: View wallet balance
+view_balance() {
+    echo "Viewing wallet balance..."
+    if [ -f ~/my-solana-wallet.json ]; then
+        # Ensure the Solana CLI uses the correct keypair
+        solana config set --keypair ~/my-solana-wallet.json
+        solana balance
+    else
+        echo "No wallet found. Please create a wallet first (Step 4)."
+    fi
+}
+
+# Main menu
 while true; do
     echo "\nSelect an option:"
     echo "1. Install Rust and Cargo"
     echo "2. Install Devnet POW Crate"
     echo "3. Configure Solana CLI"
-    echo "4. Start Mining Devnet SOL"
-    echo "5. Exit"
+    echo "4. Create a new wallet"
+    echo "5. Start Mining Devnet SOL"
+    echo "6. View Wallet Details"
+    echo "7. View Wallet Balance"
+    echo "8. Exit"
     read -p "Enter your choice: " choice
 
     case $choice in
         1)
-            step1
+            install_rust
             ;;
         2)
-            step2
+            install_devnet_pow
             ;;
         3)
-            step3
+            configure_solana
             ;;
         4)
-            step4
+            create_wallet
             ;;
         5)
+            start_mining
+            ;;
+        6)
+            view_wallet_details
+            ;;
+        7)
+            view_balance
+            ;;
+        8)
             echo "Exiting script. Goodbye!"
             break
             ;;
@@ -94,5 +137,4 @@ while true; do
             echo "Invalid choice. Please try again."
             ;;
     esac
-
 done
